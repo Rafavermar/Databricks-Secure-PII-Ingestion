@@ -1,5 +1,4 @@
 # Databricks notebook source
-# COMMAND ----------
 # MAGIC %md
 # MAGIC # 00 - Setup Unity Catalog schema and Volumes
 # MAGIC
@@ -13,11 +12,13 @@
 # MAGIC   - `checkpoints_pii`  (Auto Loader checkpoints)
 
 # COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- Inspect available catalogs
 # MAGIC SHOW CATALOGS;
 
 # COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- Use the default catalog.
 # MAGIC -- NOTE: if `main` does not exist in your workspace,
@@ -28,6 +29,7 @@
 # MAGIC USE pii_demo;
 
 # COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- Create Volumes for landing, bronze and checkpoints.
 # MAGIC -- These live on Databricks-managed storage in Free Edition.
@@ -42,6 +44,7 @@
 # MAGIC   COMMENT 'Checkpoints for Auto Loader streams';
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## Next steps
 # MAGIC
