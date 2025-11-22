@@ -207,7 +207,7 @@ Enterprise path:
   - full Unity Catalog governance and logging.
 
 
-  ## 5. Official documentation links
+## 5. Official documentation links
 - Databricks Free Edition: Managed storage, quotas, security limitations:
 https://docs.databricks.com/aws/en/getting-started/free-edition-limitations
 
