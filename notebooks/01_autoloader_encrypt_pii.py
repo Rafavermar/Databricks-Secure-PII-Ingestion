@@ -22,8 +22,26 @@
 # MAGIC > - secure views with proper grants and group-based access.
 
 # COMMAND ----------
-# Install the cryptography package (run once per cluster/session).
+# MAGIC %md
+# MAGIC ## 1. Install dependencies (run once per cluster)
+# MAGIC
+# MAGIC We use the `cryptography` package for Fernet encryption.
+# MAGIC
+# MAGIC Run this cell once when you start your cluster.
+
+# COMMAND ----------
 %pip install cryptography
+
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## 2. Configuration: paths and encryption key
+# MAGIC
+# MAGIC - Paths point to Unity Catalog Volumes created in `00_setup_uc_and_volumes`.
+# MAGIC - `ENCRYPTION_KEY` must be set to a valid Fernet key string.
+# MAGIC
+# MAGIC > NOTE[enterprise]:
+# MAGIC > - Do **not** hard-code keys.
+# MAGIC > - Fetch them from a secret manager (Key Vault / KMS) via `dbutils.secrets`.
 
 # COMMAND ----------
 from typing import Optional
@@ -37,22 +55,28 @@ from pyspark.sql.types import StringType
 # Paths in Unity Catalog Volumes (Free Edition)
 RAW_PATH = "/Volumes/main/pii_demo/landing_pii"
 BRONZE_PATH = "/Volumes/main/pii_demo/bronze_pii"
-CHECKPOINT_PATH = "/Volumes/main/pii_demo/checkpoints_pii/autoloader_pii"
+CHECKPOINT_PATH = (
+    "/Volumes/main/pii_demo/checkpoints_pii/autoloader_pii"
+)
+
+# NOTE[enterprise]:
+#   - In production, you would use external locations:
+#   - RAW_PATH    = "abfss://landing@<storage>.dfs.core.windows.net/pii_demo/raw"
+#   - BRONZE_PATH = "abfss://bronze@<storage>.dfs.core.windows.net/pii_demo/bronze"
 
 
 # NOTE[enterprise]:
-#   - In production, never hard-code encryption keys.
-#   - Use a secret store instead, for example:
+#   - Never hard-code encryption keys.
+#   - Example real-world pattern:
 #   -
 #   # ENCRYPTION_KEY = dbutils.secrets.get("pii-scope", "fernet-key")
 #   -
-#   - The secret itself would live in Azure Key Vault / KMS and be rotated.
+#   - Secret would live in Key Vault / KMS and be rotated regularly.
 
 
 # PoC / Free Edition:
 #   - Fernet key is hard-coded for learning purposes only.
-#   - Generate a Fernet key **once** and paste it here.
-#   - You can generate it with:
+#   - Generate a Fernet key **once** and paste it here:
 #   -
 #   # from cryptography.fernet import Fernet
 #   # print(Fernet.generate_key().decode("utf-8"))
@@ -65,10 +89,18 @@ if ENCRYPTION_KEY == "CHANGE_ME_WITH_A_REAL_FERNET_KEY":
 
 FERNET = Fernet(ENCRYPTION_KEY.encode("utf-8"))
 
+# COMMAND ----------
+# MAGIC %md
+# MAGIC ## 3. PII policy functions
+# MAGIC
+# MAGIC Here we define:
+# MAGIC
+# MAGIC - which columns to encrypt / hash / drop
+# MAGIC - the `encrypt_value` function and UDF
+# MAGIC - the `apply_pii_policy` transformation
+# MAGIC - the `decrypt_value` UDF used in SQL views
 
-# Columns configuration -----------------------------------------------------
-
-
+# COMMAND ----------
 ENCRYPT_COLUMNS = ["full_name", "email", "phone"]
 HASH_COLUMNS = ["national_id"]
 DROP_COLUMNS: list[str] = []
@@ -129,7 +161,7 @@ spark.udf.register("decrypt_value", decrypt_value)
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Start Auto Loader stream
+# MAGIC ## 4. Start Auto Loader stream
 # MAGIC
 # MAGIC - Reads CSV files from `RAW_PATH` (`landing_pii` Volume)
 # MAGIC - Applies the PII policy in-memory
@@ -153,11 +185,13 @@ query = (
     .start(BRONZE_PATH)
 )
 
-# You can use `query.status` and `query.lastProgress` to inspect the stream.
+# You can inspect the stream with:
+# query.status
+# query.lastProgress
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Create Delta table and views on top of the encrypted data
+# MAGIC ## 5. Create Delta table and views on top of the encrypted data
 
 # COMMAND ----------
 # MAGIC %sql
@@ -209,7 +243,7 @@ query = (
 
 # COMMAND ----------
 # MAGIC %md
-# MAGIC ## Quick manual checks
+# MAGIC ## 6. Quick manual checks
 # MAGIC
 # MAGIC From a SQL notebook or the SQL editor you can now:
 # MAGIC
