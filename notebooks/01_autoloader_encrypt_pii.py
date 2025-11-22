@@ -197,7 +197,7 @@ query = (
     pii_safe_df.writeStream.format("delta")
     .option("checkpointLocation", CHECKPOINT_PATH) # Checkpoint_path resolved as dbfs:/Volumes in runtime
     .outputMode("append")
-    .trigger(availableNow=True) # only for Databricks free edition
+    .trigger(availableNow=True) # For Databricks free edition - Reads all files and finishes. NOT inifite Streaming available.
     .start(BRONZE_PATH)
 )
 

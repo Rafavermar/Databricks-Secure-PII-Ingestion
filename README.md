@@ -116,7 +116,92 @@ This project is Free Edition-friendly on purpose. In a real enterprise deploymen
 ![DBSecurePiiEnterprise.png](Assets/DBSecurePiiEnterprise.png)
 ---
 
-## 4. Limitations
+## 4. Limitations and security model
 
-- **Educational PoC only** – not for real PII.
+This project is an educational PoC, not a production-ready security design.
 - **No real SFTP here:** `landing_pii` just simulates a secure file drop zone.
+
+### 4.1 Plain text in memory
+
+Risk:
+- Auto Loader reads the CSV as clear text.
+- The PII policy runs on clear text before encryption.
+- The `v_customers_clear` view decrypts data again at query time.
+
+Good practice:
+- Treat the compute that runs this job as a **sensitive environment**.
+- Avoid `display()` or ad-hoc exports of raw PII during development.
+- Use **short-lived jobs** instead of long-running interactive clusters.
+
+Enterprise path:
+- Run on dedicated, private compute (no shared workspaces).
+- Use network isolation and endpoint policies to limit where jobs can talk to.
+
+### 4.2 Access to the landing zone
+
+Risk:
+- Files in `landing_pii` are stored in clear text.
+- Anyone with read access to the volume can see raw PII.
+
+Good practice:
+- Keep the landing zone **small and short-lived**:
+  - only ingestion jobs can write there,
+  - only the encryption job can read from there.
+- Delete or archive files after successful encryption.
+
+Enterprise path:
+- Use a dedicated **landing container** in ADLS/S3.
+- Protect it with private networking and tight ACLs.
+- Apply automatic retention and lifecycle policies.
+
+### 4.3 Access to notebooks and clear views
+
+Risk:
+- Anyone who can run the notebook or query `v_customers_clear`
+  can see decrypted PII.
+
+Good practice:
+- Use the **masked view** (`v_customers_masked`) as the default interface.
+- Limit who can run the encryption notebook.
+- Never mix PII notebooks with general analytics notebooks.
+
+Enterprise path:
+- Use Unity Catalog grants to separate:
+  - admins who can see clear views,
+  - analysts who can only see masked views.
+- Optionally hide decryption behind service principals and audited endpoints.
+
+### 4.4 Key management
+
+Risk:
+- In this PoC the Fernet key is hard-coded in the notebook.
+- Anyone with notebook access can see and copy the key.
+
+Good practice:
+- Even in a lab, treat the key as **sensitive configuration**.
+- Do not commit real keys to Git.
+- If you rotate the key, be explicit about what data can still be read.
+
+Enterprise path:
+- Store keys in a secret manager (Key Vault, KMS, etc.).
+- Read them via `dbutils.secrets.get(...)`.
+- Implement rotation and audit on key access.
+
+### 4.5 Databricks Free Edition constraints
+
+Risk:
+- Free Edition runs entirely on Databricks-managed infrastructure.
+- You cannot configure your own cloud account, network, or customer-managed keys.
+- It is not intended for real production PII.
+
+Good practice:
+- Use this project only for **synthetic / test data**.
+- Use it to understand patterns, not to host real customer data.
+
+Enterprise path:
+- Move the pattern to a full Databricks workspace in your own cloud account.
+- Use:
+  - external locations on ADLS/S3,
+  - private networking (VNet / VPC / Private Link),
+  - customer-managed keys,
+  - full Unity Catalog governance and logging.
