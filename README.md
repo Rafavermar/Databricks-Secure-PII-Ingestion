@@ -1,6 +1,6 @@
 # Secure PII ingestion with Databricks Free Edition
 
-This repo shows a minimal end-to-end pattern to ingest PII data on **Databricks Free Edition** using:
+This repo shows a minimal end-to-end pattern to ingest PII (Personally Identifiable Information) data on **Databricks Free Edition** using:
 
 - Unity Catalog + Volumes as storage
 - Auto Loader to ingest CSV files
