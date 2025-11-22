@@ -21,7 +21,7 @@
 
 # MAGIC %sql
 # MAGIC -- Use the default catalog.
-# MAGIC -- NOTE: if `main` does not exist in your workspace,
+# MAGIC -- NOTE: if `workspace` does not exist in your workspace,
 # MAGIC --       replace it with the default catalog you see above.
 # MAGIC USE CATALOG workspace;
 # MAGIC

@@ -61,6 +61,9 @@ BRONZE_PATH = "/Volumes/workspace/pii_demo/bronze_pii"
 CHECKPOINT_PATH = (
     "/Volumes/workspace/pii_demo/checkpoints_pii/autoloader_pii"
 )
+SCHEMA_LOCATION_PATH = (
+    "/Volumes/workspace/pii_demo/checkpoints_pii/autoloader_pii_schema"
+)
 
 # NOTE[enterprise]:
 #   - In production, you would use external locations:
@@ -83,14 +86,18 @@ CHECKPOINT_PATH = (
 #   -
 #   # from cryptography.fernet import Fernet
 #   # print(Fernet.generate_key().decode("utf-8"))
-ENCRYPTION_KEY = "CHANGE_ME_WITH_A_REAL_FERNET_KEY"
 
-if ENCRYPTION_KEY == "CHANGE_ME_WITH_A_REAL_FERNET_KEY":
-    raise ValueError(
-        "Set ENCRYPTION_KEY to a real Fernet key string before running."
-    )
-
+ENCRYPTION_KEY = "c_zTIGsbCCIO0wNREIuWQ6BECU2Jxu03ULuL8eXxX4Q="
 FERNET = Fernet(ENCRYPTION_KEY.encode("utf-8"))
+
+# COMMAND ----------
+
+# Generate a Fernet key for testing purposes only
+# Execute this only once!
+
+#from cryptography.fernet import Fernet
+#print(Fernet.generate_key().decode("utf-8"))
+
 
 # COMMAND ----------
 
@@ -179,6 +186,7 @@ source_df = (
     spark.readStream.format("cloudFiles")
     .option("cloudFiles.format", "csv")
     .option("cloudFiles.inferColumnTypes", "true")
+    .option("cloudFiles.schemaLocation", SCHEMA_LOCATION_PATH)
     .option("header", "true")
     .load(RAW_PATH)
 )
@@ -187,8 +195,9 @@ pii_safe_df = apply_pii_policy(source_df)
 
 query = (
     pii_safe_df.writeStream.format("delta")
-    .option("checkpointLocation", CHECKPOINT_PATH)
+    .option("checkpointLocation", CHECKPOINT_PATH) # Checkpoint_path resolved as dbfs:/Volumes in runtime
     .outputMode("append")
+    .trigger(availableNow=True) # only for Databricks free edition
     .start(BRONZE_PATH)
 )
 
@@ -203,20 +212,39 @@ query = (
 
 # COMMAND ----------
 
+# [Enterprise] with this you will create the delta table "customers_bronze" against the storage
+
+#%sql
+#USE CATALOG workspace;
+#USE pii_demo;
+
+#CREATE TABLE IF NOT EXISTS customers_bronze
+#USING DELTA
+#LOCATION 'abfss://<container>@<storage_account>.dfs.core.windows.net/folder';
+
+# COMMAND ----------
+
 # MAGIC %sql
+# MAGIC -- Approach using Free Edition (serverless)
+# MAGIC -- UC is not able to create Tables against volumes paths. Volumes are only for accessing files by path, not to being a table "location"
 # MAGIC USE CATALOG workspace;
 # MAGIC USE pii_demo;
 # MAGIC
-# MAGIC CREATE TABLE IF NOT EXISTS customers_bronze
-# MAGIC USING DELTA
-# MAGIC LOCATION '/Volumes/workspace/pii_demo/bronze_pii';
+# MAGIC CREATE OR REPLACE VIEW customers_bronze AS
+# MAGIC SELECT *
+# MAGIC FROM delta.`/Volumes/workspace/pii_demo/bronze_pii`;
+# MAGIC
+# MAGIC SELECT * FROM customers_bronze
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- View with decrypted columns (for privileged users only)
+# MAGIC -- NOTE[enterprise]:
+# MAGIC --   In a real setup you would restrict access, for example:
+# MAGIC --   GRANT SELECT ON VIEW v_customers_clear TO `pii_admins`;
 # MAGIC
-# MAGIC CREATE OR REPLACE VIEW v_customers_clear AS
+# MAGIC CREATE OR REPLACE TEMP VIEW v_customers_clear AS
 # MAGIC SELECT
 # MAGIC   customer_id,
 # MAGIC   decrypt_value(full_name) AS full_name,
@@ -226,16 +254,17 @@ query = (
 # MAGIC   city
 # MAGIC FROM customers_bronze;
 # MAGIC
-# MAGIC -- NOTE[enterprise]:
-# MAGIC --   In a real setup you would restrict access, for example:
-# MAGIC --   GRANT SELECT ON VIEW v_customers_clear TO `pii_admins`;
+# MAGIC SELECT * FROM v_customers_clear
 
 # COMMAND ----------
 
 # MAGIC %sql
 # MAGIC -- Masked view for normal analysts
+# MAGIC -- NOTE[enterprise]:
+# MAGIC --   You would typically grant this masked view to a wider group:
+# MAGIC --   GRANT SELECT ON VIEW v_customers_masked TO `analysts`;
 # MAGIC
-# MAGIC CREATE OR REPLACE VIEW v_customers_masked AS
+# MAGIC CREATE OR REPLACE TEMP VIEW v_customers_masked AS
 # MAGIC SELECT
 # MAGIC   customer_id,
 # MAGIC   concat(substr(decrypt_value(full_name), 1, 1), '***')
@@ -248,9 +277,7 @@ query = (
 # MAGIC   city
 # MAGIC FROM customers_bronze;
 # MAGIC
-# MAGIC -- NOTE[enterprise]:
-# MAGIC --   You would typically grant this masked view to a wider group:
-# MAGIC --   GRANT SELECT ON VIEW v_customers_masked TO `analysts`;
+# MAGIC SELECT * FROM v_customers_masked
 
 # COMMAND ----------
 
@@ -260,7 +287,7 @@ query = (
 # MAGIC From a SQL notebook or the SQL editor you can now:
 # MAGIC
 # MAGIC ```sql
-# MAGIC USE CATALOG main;
+# MAGIC USE CATALOG workspace;
 # MAGIC USE pii_demo;
 # MAGIC
 # MAGIC SELECT * FROM customers_bronze;
