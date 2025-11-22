@@ -23,7 +23,7 @@
 # MAGIC -- Use the default catalog.
 # MAGIC -- NOTE: if `main` does not exist in your workspace,
 # MAGIC --       replace it with the default catalog you see above.
-# MAGIC USE CATALOG main;
+# MAGIC USE CATALOG workspace;
 # MAGIC
 # MAGIC CREATE SCHEMA IF NOT EXISTS pii_demo;
 # MAGIC USE pii_demo;
@@ -48,6 +48,6 @@
 # MAGIC %md
 # MAGIC ## Next steps
 # MAGIC
-# MAGIC 1. Go to **Data → main → pii_demo → Volumes**.
+# MAGIC 1. Go to **Catalog → workspace → pii_demo → Volumes**.
 # MAGIC 2. Open `landing_pii` and **upload a sample CSV** with PII columns.
 # MAGIC 3. Then open and run `01_autoloader_encrypt_pii.py`.

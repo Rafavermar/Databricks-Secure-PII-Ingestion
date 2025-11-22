@@ -1,5 +1,4 @@
 # Databricks notebook source
-# COMMAND ----------
 # MAGIC %md
 # MAGIC # 01 - Auto Loader + column-level encryption for PII
 # MAGIC
@@ -22,6 +21,7 @@
 # MAGIC > - secure views with proper grants and group-based access.
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 1. Install dependencies (run once per cluster)
 # MAGIC
@@ -30,9 +30,11 @@
 # MAGIC Run this cell once when you start your cluster.
 
 # COMMAND ----------
-%pip install cryptography
+
+# MAGIC %pip install cryptography
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 2. Configuration: paths and encryption key
 # MAGIC
@@ -44,6 +46,7 @@
 # MAGIC > - Fetch them from a secret manager (Key Vault / KMS) via `dbutils.secrets`.
 
 # COMMAND ----------
+
 from typing import Optional
 
 import pandas as pd
@@ -53,10 +56,10 @@ from pyspark.sql.functions import col, sha2, udf, pandas_udf
 from pyspark.sql.types import StringType
 
 # Paths in Unity Catalog Volumes (Free Edition)
-RAW_PATH = "/Volumes/main/pii_demo/landing_pii"
-BRONZE_PATH = "/Volumes/main/pii_demo/bronze_pii"
+RAW_PATH = "/Volumes/workspace/pii_demo/landing_pii"
+BRONZE_PATH = "/Volumes/workspace/pii_demo/bronze_pii"
 CHECKPOINT_PATH = (
-    "/Volumes/main/pii_demo/checkpoints_pii/autoloader_pii"
+    "/Volumes/workspace/pii_demo/checkpoints_pii/autoloader_pii"
 )
 
 # NOTE[enterprise]:
@@ -90,6 +93,7 @@ if ENCRYPTION_KEY == "CHANGE_ME_WITH_A_REAL_FERNET_KEY":
 FERNET = Fernet(ENCRYPTION_KEY.encode("utf-8"))
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 3. PII policy functions
 # MAGIC
@@ -101,6 +105,7 @@ FERNET = Fernet(ENCRYPTION_KEY.encode("utf-8"))
 # MAGIC - the `decrypt_value` UDF used in SQL views
 
 # COMMAND ----------
+
 ENCRYPT_COLUMNS = ["full_name", "email", "phone"]
 HASH_COLUMNS = ["national_id"]
 DROP_COLUMNS: list[str] = []
@@ -160,6 +165,7 @@ def decrypt_value(col_series: pd.Series) -> pd.Series:
 spark.udf.register("decrypt_value", decrypt_value)
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 4. Start Auto Loader stream
 # MAGIC
@@ -168,6 +174,7 @@ spark.udf.register("decrypt_value", decrypt_value)
 # MAGIC - Writes encrypted Delta rows into `BRONZE_PATH` (`bronze_pii` Volume)
 
 # COMMAND ----------
+
 source_df = (
     spark.readStream.format("cloudFiles")
     .option("cloudFiles.format", "csv")
@@ -190,19 +197,22 @@ query = (
 # query.lastProgress
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 5. Create Delta table and views on top of the encrypted data
 
 # COMMAND ----------
+
 # MAGIC %sql
-# MAGIC USE CATALOG main;
+# MAGIC USE CATALOG workspace;
 # MAGIC USE pii_demo;
 # MAGIC
 # MAGIC CREATE TABLE IF NOT EXISTS customers_bronze
 # MAGIC USING DELTA
-# MAGIC LOCATION '/Volumes/main/pii_demo/bronze_pii';
+# MAGIC LOCATION '/Volumes/workspace/pii_demo/bronze_pii';
 
 # COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- View with decrypted columns (for privileged users only)
 # MAGIC
@@ -221,6 +231,7 @@ query = (
 # MAGIC --   GRANT SELECT ON VIEW v_customers_clear TO `pii_admins`;
 
 # COMMAND ----------
+
 # MAGIC %sql
 # MAGIC -- Masked view for normal analysts
 # MAGIC
@@ -242,6 +253,7 @@ query = (
 # MAGIC --   GRANT SELECT ON VIEW v_customers_masked TO `analysts`;
 
 # COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 6. Quick manual checks
 # MAGIC
