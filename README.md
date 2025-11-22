@@ -205,3 +205,32 @@ Enterprise path:
   - private networking (VNet / VPC / Private Link),
   - customer-managed keys,
   - full Unity Catalog governance and logging.
+
+
+  ## 5. Official documentation links
+- Databricks Free Edition: Managed storage, quotas, security limitations:
+https://docs.databricks.com/aws/en/getting-started/free-edition-limitations
+
+- Unity Catalog & Volumes:
+Data governance, controlled storage zones:
+https://docs.databricks.com/aws/en/sql/language-manual/sql-ref-volumes
+
+- Auto Loader:
+Incremental streaming ingestion, availableNow trigger
+https://docs.databricks.com/aws/en/ingestion/cloud-object-storage/auto-loader
+
+- Column-level encryption (Fernet, Python):
+Python cryptography, Fernet key usage
+https://cryptography.io/en/latest/fernet/
+Example in Databricks:
+https://www.linkedin.com/posts/selvamkasi_column-level-encryption-in-databricks-using-activity-7373300937303580672-XVGQ/
+
+- Access controls, masking & views:
+Masking in SQL, role separation using views:
+https://learn.microsoft.com/en-us/azure/databricks/views/dynamic | 
+https://docs.plainid.io/docs/databricks-column-level-access | 
+https://hoop.dev/blog/pii-catalog-and-data-masking-in-databricks-a-practical-guide/
+
+- Security model & best practices:
+Governance, recommended controls, enterprise migration:
+https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/best-practices
