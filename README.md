@@ -10,7 +10,7 @@ This repo shows a small, end-to-end example of how to ingest PII (Personally Ide
 > **Disclaimer** > This is an educational PoC on Databricks Free Edition.  
 > Do **not** use this project as-is for real production PII.
 
-![DBSecurePiiFree.png](Assets/Architecture_MarinasMCP.png)
+![DBSecurePiiFree.png](Assets/DBSecurePiiFree.png)
 ---
 
 ## 1. What you build
